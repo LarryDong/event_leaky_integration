@@ -1,5 +1,5 @@
 import argparse
-from math import exp
+import math
 import os
 import cv2
 import numpy as np
@@ -16,19 +16,17 @@ def read_frame_ts(filename):
     return ts
 
 
-# log(I(x), t) = log(I(x), 0)*decay + C*p
+# log(I(x), t) = e^{-a*dt*s(x_k, t_{k-1})} + p      main equation
 def direct_integrate(img, ts_frame, ts, xs, ys, ps):
-    C = 0.8
-    decay = 3
-    lg_img = cv2.log(img)
+    lg = cv2.log(img)
+    a = 5
     for x,y,t,p in zip(xs,ys,ts,ps):
         p = 2*p - 1
-        factor = exp(-decay*(t - ts_frame[x, y])*1e-3)      # set factor to 1 if using 'non-leaky' model
-        ts_frame[x, y] = t
-        v = lg_img[x, y]*factor + p*C
-        v = 0 if (v >= 0) else v                    # avoid out-of-boundar (img \in 0~1, lg <= 0)
-        lg_img[x, y] = v
-    return cv2.exp(lg_img), ts_frame
+        dt = t - ts_frame[x, y]
+        ts_frame[x,y] = t
+        lg[x, y] = math.exp(-a*dt*1e-3)*lg[x, y] + p
+    img = cv2.exp(lg)
+    return img, ts_frame
 
 
 if __name__ == '__main__':
