@@ -26,6 +26,7 @@ def direct_integrate(img, ts_frame, ts, xs, ys, ps):
         ts_frame[x,y] = t
         lg[x, y] = math.exp(-a*dt*1e-3)*lg[x, y] + p
     img = cv2.exp(lg)
+    img[img >= 1] = 1       # avoid out-of-boundary
     return img, ts_frame
 
 
