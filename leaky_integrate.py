@@ -16,17 +16,19 @@ def read_frame_ts(filename):
     return ts
 
 
-# log(I(x), t) = e^{-a*dt*s(x_k, t_{k-1})} + p      main equation
-def direct_integrate(img, ts_frame, ts, xs, ys, ps):
+# # log(I(x), t) = e^{-a*dt*s(x_k, t_{k-1})} + p      main equation
+def direct_integrate(img, ts_frame, ts, xs, ys, ps, cutoff_frequency=5):
+    C = 0.5
     lg = cv2.log(img)
-    a = 5
     for x,y,t,p in zip(xs,ys,ts,ps):
-        p = 2*p - 1
-        dt = t - ts_frame[x, y]
-        ts_frame[x,y] = t
-        lg[x, y] = math.exp(-a*dt*1e-3)*lg[x, y] + p
+        p = 2*p -1
+        dt = t - ts_frame[y, x]
+        beta = math.exp(-cutoff_frequency*dt*1e-3)
+        lg[y, x] = beta*lg[y, x] + p*C
+        ts_frame[y, x] = t
     img = cv2.exp(lg)
-    img[img >= 1] = 1       # avoid out-of-boundary
+    img[img>1]=1
+    print(img)
     return img, ts_frame
 
 
@@ -67,8 +69,8 @@ if __name__ == '__main__':
                 os.abort()
             row = row.split(' ')            # split using ',' or ' '
             ts.append(float(row[0])/1000)
-            ys.append(int(row[1]))
-            xs.append(int(row[2]))
+            xs.append(int(row[1]))
+            ys.append(int(row[2]))
             ps.append(int(row[3][0]))       # using [0] to avoid '\n'
             if ts[-1] > current_ts:
                 inte_frame, ts_frame = direct_integrate(inte_frame, ts_frame, ts, xs, ys, ps)
@@ -77,7 +79,9 @@ if __name__ == '__main__':
                 ts, ys, xs, ps = [], [], [], []
                 cv2.imshow('leaky-integrate', inte_frame)
                 # save images
-                cv2.imwrite('image/' + str(current_ts) + '.bmp', np.uint8(inte_frame*255))
+                gray_img = np.uint8(inte_frame*255.0)
+                print(inte_frame)
+                # cv2.imwrite('image/' + str(current_ts) + '.bmp', gray_img)
                 key = cv2.waitKey(10)
                 if key == ord('q'):
                     print('abort!!!')
